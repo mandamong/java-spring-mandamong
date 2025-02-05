@@ -7,8 +7,14 @@ import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
+
+import java.util.Collections;
 import java.util.Date;
+import java.util.Set;
 
 @RequiredArgsConstructor
 @Service
@@ -26,9 +32,9 @@ public class TokenProvider {
     private static final long ACCESS_TOKEN_EXPIRE_TIME = 1000 * 60 * 10; // 10분
     private static final long REFRESH_TOKEN_EXPIRE_TIME = 1000L * 60 * 60 * 24 * 30; // 30일
 
-    //// JWT 토큰 생성
-    // - AccessToken 생성 메서드
-    private String makeAccessToken(Date expiry, Member member){
+    // JWT 토큰 생성
+    // AccessToken 생성 메서드
+    public String makeAccessToken(Long memberId){
         Date now = new Date();
         return Jwts.builder()
                 .header()
@@ -38,13 +44,12 @@ public class TokenProvider {
                 .issuer(issuer)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + ACCESS_TOKEN_EXPIRE_TIME))
-                .subject(member.getEmail())
-                .claim("id",  member.getId())
+                .claim("id",  memberId)
                 .signWith(Keys.hmacShaKeyFor(accessSecretKey.getBytes()), Jwts.SIG.HS512)
                 .compact();
     }
-    // - RefreshToken 생성 메서드
-    private String makeRefreshToken(Date expiry, Member member){
+    // RefreshToken 생성 메서드
+    public String makeRefreshToken(Long memberId){
         Date now = new Date();
         return Jwts.builder()
                 .header()
@@ -54,15 +59,14 @@ public class TokenProvider {
                 .issuer(issuer)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + REFRESH_TOKEN_EXPIRE_TIME))
-                .subject(member.getEmail())
-                .claim("id",  member.getId())
+                .claim("id",  memberId)
                 .signWith(Keys.hmacShaKeyFor(refreshSecretKey.getBytes()), Jwts.SIG.HS512)
                 .compact();
     }
 
 
-    //// JWT 토큰 유효성 검증
-    // - AccessToken 유효성 검증 메서드
+    // JWT 토큰 유효성 검증
+    // AccessToken 유효성 검증 메서드
     public boolean validateAccessToken(String token) {
         try{
             Jwts.parser()
@@ -74,7 +78,7 @@ public class TokenProvider {
             return false;
         }
     }
-    // - RefreshToken 유효성 검증 메서드
+    // RefreshToken 유효성 검증 메서드
     public boolean validateRefreshToken(String token) {
         try{
             Jwts.parser()
@@ -85,6 +89,15 @@ public class TokenProvider {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    // 토큰 기반으로 인증 정보를 가져오는 메서드
+    public Authentication getAuthentication(String token) {
+        Claims claims = getClaims(token);
+        Set<SimpleGrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority("ROLE_USER"));
+        return new UsernamePasswordAuthenticationToken(new org.springframework.security.core.userdetails.User(claims.getSubject(), "", authorities),
+                token, authorities);
+
     }
 
     // 토큰에서 memberId를 가져오는 메서드
@@ -104,5 +117,4 @@ public class TokenProvider {
     public String getRefreshTokenFromRedis(String loginId){
         return redisTemplate.opsForValue().get(loginId);
     }
-
 }
