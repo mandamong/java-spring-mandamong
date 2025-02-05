@@ -1,4 +1,4 @@
-package com.mandamong.api.global.config;
+package com.mandamong.api.member.config;
 
 import org.hibernate.mapping.Any;
 import org.springframework.beans.factory.annotation.Value;

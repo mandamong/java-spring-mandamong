@@ -26,3 +26,9 @@ spring:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
       password: ${REDIS_PASSWORD}
+
+jwt:
+  issuer: mandamong.offical@gmail.com
+  secret:
+    access: ${ACCESS_SECRET_KEY}
+    refresh: ${REFRESH_SECRET_KEY}
